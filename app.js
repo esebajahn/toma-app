@@ -60,9 +60,6 @@
   const state = {
     data: null,
     complimentIndex: 0,
-    ideaIndex: 0,
-    ideaShowingBack: false,
-    filters: new Set(),
     musicMood: "happy",
     moods: {}
   };
@@ -166,7 +163,6 @@
     if (!inTelegram || !tg.MainButton) return;
     const labels = {
       compliment: "Ещё комплимент",
-      ideas: "Другая идея",
       music: "Следующее настроение",
       mood: "Сохранить день"
     };
@@ -185,7 +181,6 @@
     const tab = active ? active.getAttribute("data-tab") : "compliment";
     haptic("light");
     if (tab === "compliment") showCompliment(true);
-    else if (tab === "ideas") showIdea(true);
     else if (tab === "music") cycleMusicMood();
     else if (tab === "mood") {
       const today = state.moods[dateKey(new Date())];
@@ -301,62 +296,6 @@
       el.style.opacity = "1";
       el.style.transform = "translateY(0)";
     }, 120);
-  }
-
-  function filteredIdeas() {
-    const ideas = state.data.ideas || [];
-    if (!state.filters.size) return ideas;
-    return ideas.filter((idea) => {
-      const tags = idea.tags || [];
-      if (state.filters.has("home") && state.filters.has("outdoor")) {
-        /* both ends of the day are fine: keep items matching any other selected filters, plus either place */
-      }
-      for (const f of state.filters) {
-        if (!tags.includes(f)) return false;
-      }
-      return true;
-    });
-  }
-
-  function renderIdeaInto(el, idea) {
-    if (!idea) {
-      el.innerHTML = `<p class="idea-title">Пока пусто</p><p class="idea-text">Сними один из фильтров — и идеи сразу появятся.</p>`;
-      return;
-    }
-    el.innerHTML = `<p class="idea-title"></p><p class="idea-text"></p>`;
-    el.querySelector(".idea-title").textContent = idea.title;
-    el.querySelector(".idea-text").textContent = idea.text;
-  }
-
-  function showIdea(advance) {
-    const ideas = filteredIdeas();
-    const front = document.getElementById("ideaFront");
-    const back = document.getElementById("ideaBack");
-    const card = document.getElementById("ideaFlip");
-    if (!ideas.length) {
-      renderIdeaInto(front, null);
-      renderIdeaInto(back, null);
-      card.classList.remove("is-flipped");
-      state.ideaShowingBack = false;
-      return;
-    }
-    if (advance) state.ideaIndex = (state.ideaIndex + 1) % ideas.length;
-    else state.ideaIndex = hashString(dateKey(new Date()) + [...state.filters].join(",")) % ideas.length;
-    const idea = ideas[state.ideaIndex % ideas.length];
-    if (!advance) {
-      renderIdeaInto(front, idea);
-      state.ideaShowingBack = false;
-      card.classList.remove("is-flipped");
-      return;
-    }
-    if (state.ideaShowingBack) {
-      renderIdeaInto(front, idea);
-      card.classList.remove("is-flipped");
-    } else {
-      renderIdeaInto(back, idea);
-      card.classList.add("is-flipped");
-    }
-    state.ideaShowingBack = !state.ideaShowingBack;
   }
 
   function yandexUrl(artist, title) {
@@ -601,20 +540,6 @@
       haptic("light");
       showCompliment(true);
     });
-    document.getElementById("nextIdea").addEventListener("click", () => {
-      haptic("light");
-      showIdea(true);
-    });
-    document.getElementById("ideaFilters").addEventListener("click", (event) => {
-      const chip = event.target.closest("[data-filter]");
-      if (!chip) return;
-      const f = chip.getAttribute("data-filter");
-      if (state.filters.has(f)) state.filters.delete(f);
-      else state.filters.add(f);
-      chip.classList.toggle("is-on", state.filters.has(f));
-      haptic("soft");
-      showIdea(false);
-    });
     document.getElementById("weatherRetry").addEventListener("click", () => {
       haptic("light");
       loadWeather();
@@ -637,7 +562,6 @@
       return;
     }
     showCompliment(false);
-    showIdea(false);
     initMusicChips();
     renderMusic("happy");
     initMoodPicker();

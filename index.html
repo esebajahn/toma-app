@@ -55,7 +55,6 @@
 
     <nav class="tabs" role="tablist" aria-label="Разделы">
       <button type="button" class="tab is-active" role="tab" aria-selected="true" data-tab="compliment">Комплимент</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="ideas">Куда сходить</button>
       <button type="button" class="tab" role="tab" aria-selected="false" data-tab="music">Музыка</button>
       <button type="button" class="tab" role="tab" aria-selected="false" data-tab="mood">Настроение</button>
     </nav>
@@ -68,25 +67,6 @@
       </article>
     </section>
 
-    <section class="panel" id="panel-ideas" role="tabpanel" hidden>
-      <article class="card feature-card">
-        <p class="card-kicker">Куда сходить</p>
-        <p class="card-lead">Выбери настроение дня — и получи идею.</p>
-        <div class="filters" id="ideaFilters">
-          <button type="button" class="chip" data-filter="home">дома</button>
-          <button type="button" class="chip" data-filter="outdoor">на улице</button>
-          <button type="button" class="chip" data-filter="cheap">дёшево</button>
-          <button type="button" class="chip" data-filter="rain">если дождь</button>
-        </div>
-        <div class="flip-scene">
-          <div class="flip-card" id="ideaFlip">
-            <div class="flip-face flip-front" id="ideaFront"></div>
-            <div class="flip-face flip-back" id="ideaBack"></div>
-          </div>
-        </div>
-        <button type="button" class="btn" id="nextIdea">Другая идея</button>
-      </article>
-    </section>
 
     <section class="panel" id="panel-music" role="tabpanel" hidden>
       <article class="card feature-card">

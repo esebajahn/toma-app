@@ -256,7 +256,7 @@ h1 {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 14px;
   animation: rise 1s ease both;
@@ -269,9 +269,10 @@ h1 {
   background: var(--white);
   color: var(--ink-soft);
   border-radius: 999px;
-  padding: 10px 8px;
-  font-size: 13px;
+  padding: 10px 6px;
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   backdrop-filter: blur(16px);
   transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
@@ -380,48 +381,10 @@ h1 {
   border-color: transparent;
 }
 
-.flip-scene {
-  perspective: 1200px;
-  margin-bottom: 16px;
-  min-height: 168px;
-}
 
-.flip-card {
-  position: relative;
-  min-height: 168px;
-  transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(0.4, 0.05, 0.2, 1);
-}
 
-.flip-card.is-flipped { transform: rotateY(180deg); }
 
-.flip-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  padding: 16px 16px 18px;
-  background: linear-gradient(160deg, rgba(255,255,255,0.86), rgba(255,237,246,0.7) 55%, rgba(255,236,222,0.75));
-  border: 1px solid rgba(255,255,255,0.9);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
 
-.flip-back { transform: rotateY(180deg); }
-
-.idea-title {
-  font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1.15;
-  margin-bottom: 8px;
-}
-
-.idea-text {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
 
 .music-intro {
   font-size: 14px;
@@ -602,8 +565,4 @@ h1 {
     animation: none !important;
     transition: none !important;
   }
-  .flip-card, .flip-card.is-flipped { transform: none !important; }
-  .flip-back { display: none; }
-  .flip-card.is-flipped .flip-front { display: none; }
-  .flip-card.is-flipped .flip-back { display: block; transform: none; }
 }
