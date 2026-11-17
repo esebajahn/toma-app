@@ -57,7 +57,11 @@
       <button type="button" class="tab is-active" role="tab" aria-selected="true" data-tab="compliment">Комплимент</button>
       <button type="button" class="tab" role="tab" aria-selected="false" data-tab="music">Музыка</button>
       <button type="button" class="tab" role="tab" aria-selected="false" data-tab="mood">Настроение</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="letters">Послания</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="jar">Банка</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="game">Игра</button>
     </nav>
+    <button type="button" class="tab tab-wide" role="tab" aria-selected="false" data-tab="write">Написать Владику</button>
 
     <section class="panel is-active" id="panel-compliment" role="tabpanel">
       <article class="card feature-card">
@@ -84,6 +88,11 @@
         <p class="card-lead">Одной кнопкой — как прошёл день. Через неделю будет красивая картина.</p>
         <div class="mood-picker" id="moodPicker"></div>
         <p class="mood-status" id="moodStatus"></p>
+        <label class="share-toggle">
+          <input type="checkbox" id="shareMoodToggle" />
+          <span>Делиться настроением с Владиком</span>
+        </label>
+        <p class="share-hint" id="shareMoodHint">По умолчанию выключено. Если включишь, сегодняшнее настроение уйдёт ему сообщением.</p>
         <div class="chart-wrap">
           <p class="chart-title">Последние 7 дней</p>
           <div class="chart" id="moodChart"></div>
@@ -91,8 +100,64 @@
       </article>
     </section>
 
+
+    <section class="panel" id="panel-letters" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Тайные послания</p>
+        <p class="card-lead">Письма на разные дни. Закрытые откроются сами, когда придёт дата.</p>
+        <div class="letters" id="lettersList"></div>
+        <div class="letter-open hidden" id="letterOpen" hidden>
+          <button type="button" class="letter-close" id="letterClose">Назад</button>
+          <p class="letter-open-date" id="letterOpenDate"></p>
+          <p class="letter-open-title" id="letterOpenTitle"></p>
+          <p class="letter-open-text" id="letterOpenText"></p>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-jar" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Банка настроения</p>
+        <p class="card-lead">Нажми на банку или потряси телефон — выпадет записка.</p>
+        <div class="jar-stage" id="jarStage">
+          <button type="button" class="jar" id="jarBtn" aria-label="Достать записку">
+            <span class="jar-glass"></span>
+            <span class="jar-notes" aria-hidden="true"></span>
+            <span class="jar-lid"></span>
+          </button>
+          <p class="jar-hint" id="jarHint">Нажми на банку</p>
+          <div class="jar-card hidden" id="jarCard"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-game" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Поймай звёзды</p>
+        <p class="card-lead">Лови их банкой. На это 30 секунд.</p>
+        <div class="game-bar">
+          <span>время <b id="gameTime">30</b></span>
+          <span>счёт <b id="gameScore">0</b></span>
+          <span>рекорд <b id="gameBest">0</b></span>
+        </div>
+        <canvas id="gameCanvas" width="700" height="640" aria-label="Игра: лови звёзды"></canvas>
+        <p class="game-msg" id="gameMsg">Нажми «Играть», когда будешь готова.</p>
+        <button type="button" class="btn" id="gameStart">Играть</button>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-write" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Написать Владику</p>
+        <p class="card-lead">Выбери фразу — и сразу откроется чат.</p>
+        <div class="filters" id="writePhrases"></div>
+        <button type="button" class="btn" id="writeBtn">Написать Владику</button>
+        <p class="write-hint" id="writeHint"></p>
+      </article>
+    </section>
+
     <footer class="footer">
-      <p>С теплом, Eseba</p>
+      <p>С теплом, Владик</p>
     </footer>
   </div>
 

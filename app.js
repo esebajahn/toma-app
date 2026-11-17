@@ -164,7 +164,11 @@
     const labels = {
       compliment: "Ещё комплимент",
       music: "Следующее настроение",
-      mood: "Сохранить день"
+      mood: "Сохранить день",
+      letters: "Послания",
+      jar: "Ещё записку",
+      game: "Играть",
+      write: "Написать Владику"
     };
     try {
       tg.MainButton.setText(labels[tab] || "Готово");
@@ -186,7 +190,9 @@
       const today = state.moods[dateKey(new Date())];
       if (today) haptic("success");
       else document.querySelector(".mood-btn[data-id='3']")?.click();
-    }
+    } else if (tab === "jar") drawJarNote();
+    else if (tab === "game") startGame();
+    else if (tab === "write") sendToVlad();
   }
 
   function startSparkles() {
@@ -416,6 +422,66 @@
     if (cloud && Object.keys(local).length === 0) writeLocalMoods(state.moods);
   }
 
+  const SHARE_KEY = "toma-share-mood-v1";
+
+  function shareMoodEnabled() {
+    try {
+      return localStorage.getItem(SHARE_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function setShareMoodEnabled(on) {
+    try {
+      localStorage.setItem(SHARE_KEY, on ? "1" : "0");
+    } catch (_) { /* ignore */ }
+  }
+
+  function initShareToggle() {
+    const box = document.getElementById("shareMoodToggle");
+    if (!box) return;
+    box.checked = shareMoodEnabled();
+    box.addEventListener("change", () => {
+      setShareMoodEnabled(box.checked);
+      haptic("soft");
+      const hint = document.getElementById("shareMoodHint");
+      if (box.checked) {
+        hint.textContent = "Хорошо. Когда отметишь настроение, Владик получит короткое сообщение. Другое из приложения само не уходит.";
+        const today = state.moods[dateKey(new Date())];
+        if (today) maybeShareMood(today);
+      } else {
+        hint.textContent = "Выключено. Настроение остаётся только у тебя.";
+      }
+    });
+  }
+
+  async function maybeShareMood(mood) {
+    if (!shareMoodEnabled() || !mood) return;
+    const initData = (inTelegram && tg && tg.initData) || "";
+    if (!initData) {
+      const hint = document.getElementById("shareMoodHint");
+      if (hint) hint.textContent = "Это сработает, когда откроешь приложение внутри Telegram.";
+      return;
+    }
+    const base = String((state.data && state.data.worker_url) || "").replace(/\/+$/, "");
+    if (!base) return;
+    try {
+      await fetch(base + "/mood", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          initData,
+          mood: {
+            emoji: mood.emoji,
+            label: mood.label,
+            date: dateKey(new Date()),
+          },
+        }),
+      });
+    } catch (_) { /* offline or blocked; mood still saved locally */ }
+  }
+
   function saveMood(id) {
     const key = dateKey(new Date());
     const mood = MOODS.find((m) => m.id === id);
@@ -424,6 +490,7 @@
     cloudSet(state.moods);
     renderMoodUI();
     haptic("success");
+    maybeShareMood(state.moods[key]);
   }
 
   function lastSevenKeys() {
@@ -499,6 +566,8 @@
     });
     setupMainButton(tab);
     haptic("soft");
+    if (tab !== "game") stopGame(false);
+    if (tab === "jar") enableShake();
   }
 
   async function loadWeather() {
@@ -509,7 +578,7 @@
     ready.classList.add("hidden");
     error.classList.add("hidden");
     try {
-      const res = await fetch(WEATHER_URL);
+      const res = await fetch(WEATHER_URL, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error("weather http");
       const data = await res.json();
       const cur = data.current || {};
@@ -532,6 +601,327 @@
     }
   }
 
+
+  const MONTHS_SHORT = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  const GAME_BEST_KEY = "toma-star-best-v1";
+  let jarLastIndex = -1;
+  let selectedPhrase = "";
+  let shakeArmed = false;
+  let lastShake = 0;
+  let game = null;
+
+  function formatRuDate(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return `${d} ${MONTHS_SHORT[m - 1]}`;
+  }
+
+  function daysUntil(iso) {
+    const today = dateKey(new Date());
+    const t = Date.parse(`${today}T12:00:00+03:00`);
+    const n = Date.parse(`${iso}T12:00:00+03:00`);
+    if (!Number.isFinite(t) || !Number.isFinite(n)) return 0;
+    return Math.ceil((n - t) / 86400000);
+  }
+
+  function renderLetters() {
+    const list = document.getElementById("lettersList");
+    const open = document.getElementById("letterOpen");
+    list.classList.remove("hidden");
+    open.classList.add("hidden");
+    open.setAttribute("hidden", "");
+    list.replaceChildren();
+    const messages = (state.data.secret_messages || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const today = dateKey(new Date());
+    messages.forEach((msg) => {
+      const unlocked = msg.date <= today;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "envelope" + (unlocked ? "" : " is-locked");
+      const days = daysUntil(msg.date);
+      let meta;
+      if (unlocked) meta = msg.date === today ? "можно открыть сегодня" : `открыто · ${formatRuDate(msg.date)}`;
+      else if (days === 1) meta = `откроется завтра, ${formatRuDate(msg.date)}`;
+      else meta = `ещё ${days} дн. · ${formatRuDate(msg.date)}`;
+      btn.innerHTML = `<span class="envelope-icon" aria-hidden="true"></span><span><span class="envelope-title"></span><span class="envelope-meta"></span></span>`;
+      btn.querySelector(".envelope-title").textContent = unlocked ? msg.title : "Закрыто";
+      btn.querySelector(".envelope-meta").textContent = meta;
+      if (unlocked) {
+        btn.addEventListener("click", () => openLetter(msg));
+      }
+      list.append(btn);
+    });
+  }
+
+  function openLetter(msg) {
+    haptic("success");
+    document.getElementById("lettersList").classList.add("hidden");
+    const open = document.getElementById("letterOpen");
+    open.classList.remove("hidden");
+    open.removeAttribute("hidden");
+    document.getElementById("letterOpenDate").textContent = formatRuDate(msg.date);
+    document.getElementById("letterOpenTitle").textContent = msg.title;
+    document.getElementById("letterOpenText").textContent = msg.text;
+  }
+
+  function drawJarNote() {
+    const notes = state.data.jar_notes || [];
+    if (!notes.length) return;
+    let next = Math.floor(Math.random() * notes.length);
+    if (notes.length > 1) {
+      while (next === jarLastIndex) next = Math.floor(Math.random() * notes.length);
+    }
+    jarLastIndex = next;
+    const jar = document.getElementById("jarBtn");
+    const card = document.getElementById("jarCard");
+    jar.classList.remove("is-shake");
+    void jar.offsetWidth;
+    jar.classList.add("is-shake");
+    card.classList.remove("hidden");
+    card.textContent = notes[next];
+    haptic("success");
+  }
+
+  function onDeviceMotion(event) {
+    const acc = event.accelerationIncludingGravity || event.acceleration;
+    if (!acc) return;
+    const mag = Math.abs(acc.x || 0) + Math.abs(acc.y || 0) + Math.abs(acc.z || 0);
+    const now = Date.now();
+    if (mag > 28 && now - lastShake > 1200) {
+      lastShake = now;
+      const tab = document.querySelector(".tab.is-active");
+      if (tab && tab.getAttribute("data-tab") === "jar") drawJarNote();
+    }
+  }
+
+  async function enableShake() {
+    if (shakeArmed) return;
+    const DM = window.DeviceMotionEvent;
+    if (!DM) return;
+    try {
+      if (typeof DM.requestPermission === "function") {
+        const res = await DM.requestPermission();
+        if (res !== "granted") return;
+      }
+      window.addEventListener("devicemotion", onDeviceMotion, { passive: true });
+      shakeArmed = true;
+      document.getElementById("jarHint").textContent = "Нажми на банку или потряси телефон";
+    } catch (_) { /* no motion permission */ }
+  }
+
+  function vladChatUrl(phrase) {
+    const username = String((state.data && state.data.vlad_username) || "").replace(/^@/, "").trim();
+    if (!username) return "";
+    return `https://t.me/${username}?text=${encodeURIComponent(phrase)}`;
+  }
+
+  function openVladLink(url) {
+    try {
+      if (inTelegram && tg && typeof tg.openTelegramLink === "function") {
+        tg.openTelegramLink(url);
+        return;
+      }
+    } catch (_) { /* fallback below */ }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function initWrite() {
+    const phrases = state.data.write_phrases || ["Мне скучно", "Есть минутка?", "Расскажу кое-что", "Как дела?"];
+    selectedPhrase = phrases[0];
+    const wrap = document.getElementById("writePhrases");
+    wrap.replaceChildren();
+    phrases.forEach((phrase, i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip" + (i === 0 ? " is-on" : "");
+      btn.textContent = phrase;
+      btn.addEventListener("click", () => {
+        selectedPhrase = phrase;
+        wrap.querySelectorAll(".chip").forEach((c) => c.classList.toggle("is-on", c === btn));
+        haptic("soft");
+      });
+      wrap.append(btn);
+    });
+    const hint = document.getElementById("writeHint");
+    if (!vladChatUrl("ok")) {
+      hint.textContent = "Чтобы кнопка открывала чат с Владиком, добавь его юзернейм в data.json — поле vlad_username.";
+    } else {
+      hint.textContent = "";
+    }
+  }
+
+  function sendToVlad() {
+    const url = vladChatUrl(selectedPhrase || "Привет");
+    haptic("light");
+    const hint = document.getElementById("writeHint");
+    if (!url) {
+      hint.textContent = "Юзернейм Влада ещё не указан. Можно пока написать боту.";
+      try {
+        if (inTelegram && tg && typeof tg.openTelegramLink === "function") {
+          tg.openTelegramLink("https://t.me/attempt1Toma_bot");
+          return;
+        }
+      } catch (_) {}
+      window.open("https://t.me/attempt1Toma_bot", "_blank", "noopener,noreferrer");
+      return;
+    }
+    openVladLink(url);
+  }
+
+  function loadBest() {
+    try {
+      return Number(localStorage.getItem(GAME_BEST_KEY) || 0) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function saveBest(score) {
+    try { localStorage.setItem(GAME_BEST_KEY, String(score)); } catch (_) { /* ignore */ }
+  }
+
+  function stopGame(showMessage) {
+    if (game && game.raf) cancelAnimationFrame(game.raf);
+    const wasRunning = !!(game && game.running);
+    if (game) game.running = false;
+    if (showMessage && wasRunning) {
+      document.getElementById("gameMsg").textContent = `Готово. Счёт: ${game.score}. Нажми «Играть», если хочешь ещё раз.`;
+      document.getElementById("gameStart").textContent = "Ещё раз";
+    }
+  }
+
+  function startGame() {
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    stopGame(false);
+    const best = loadBest();
+    document.getElementById("gameBest").textContent = String(best);
+    document.getElementById("gameStart").textContent = "Ещё раз";
+    game = {
+      running: true,
+      started: performance.now(),
+      duration: 30000,
+      score: 0,
+      jarX: 0.5,
+      stars: [],
+      raf: 0,
+      width: canvas.width,
+      height: canvas.height,
+    };
+    document.getElementById("gameScore").textContent = "0";
+    document.getElementById("gameTime").textContent = "30";
+    document.getElementById("gameMsg").textContent = "Води банкой влево и вправо.";
+    haptic("light");
+
+    function spawn() {
+      game.stars.push({
+        x: 0.08 + Math.random() * 0.84,
+        y: -0.06,
+        s: 0.004 + Math.random() * 0.006,
+        r: 8 + Math.random() * 6,
+        caught: false,
+      });
+    }
+
+    function pointerToX(event) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      game.jarX = Math.min(0.92, Math.max(0.08, (clientX - rect.left) / rect.width));
+    }
+
+    if (!canvas._gameBound) {
+      canvas.addEventListener("pointerdown", (e) => { canvas.setPointerCapture(e.pointerId); pointerToX(e); });
+      canvas.addEventListener("pointermove", (e) => { if (game && game.running) pointerToX(e); });
+      canvas._gameBound = true;
+    }
+
+    let lastSpawn = 0;
+    function frame(now) {
+      if (!game || !game.running) return;
+      const left = Math.max(0, game.duration - (now - game.started));
+      document.getElementById("gameTime").textContent = String(Math.ceil(left / 1000));
+      if (now - lastSpawn > 450) {
+        spawn();
+        lastSpawn = now;
+      }
+      const w = game.width;
+      const h = game.height;
+      ctx.clearRect(0, 0, w, h);
+      // soft sky dots already from CSS bg
+      const jarW = 110;
+      const jarH = 70;
+      const jarX = game.jarX * w - jarW / 2;
+      const jarY = h - 90;
+      // jar
+      ctx.save();
+      const grad = ctx.createLinearGradient(jarX, jarY, jarX, jarY + jarH);
+      grad.addColorStop(0, "rgba(255,255,255,0.7)");
+      grad.addColorStop(1, "rgba(217,184,240,0.75)");
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(jarX + 16, jarY);
+      ctx.lineTo(jarX + jarW - 16, jarY);
+      ctx.lineTo(jarX + jarW - 6, jarY + jarH);
+      ctx.quadraticCurveTo(jarX + jarW / 2, jarY + jarH + 14, jarX + 6, jarY + jarH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#c9a0dc";
+      ctx.fillRect(jarX + 22, jarY - 10, jarW - 44, 14);
+      ctx.restore();
+
+      const mouthL = jarX + 18;
+      const mouthR = jarX + jarW - 18;
+      const mouthY = jarY + 8;
+      game.stars.forEach((star) => {
+        if (star.caught) return;
+        star.y += star.s;
+        const sx = star.x * w;
+        const sy = star.y * h;
+        if (sy > mouthY && sy < mouthY + 36 && sx > mouthL && sx < mouthR) {
+          star.caught = true;
+          game.score += 1;
+          document.getElementById("gameScore").textContent = String(game.score);
+          haptic("light");
+          return;
+        }
+        // star
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.fillStyle = "#fff6d8";
+        ctx.strokeStyle = "rgba(255, 200, 140, 0.8)";
+        ctx.beginPath();
+        for (let i = 0; i < 5; i += 1) {
+          const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          const a2 = a + Math.PI / 5;
+          ctx.lineTo(Math.cos(a) * star.r, Math.sin(a) * star.r);
+          ctx.lineTo(Math.cos(a2) * star.r * 0.42, Math.sin(a2) * star.r * 0.42);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+      game.stars = game.stars.filter((s) => !s.caught && s.y < 1.15);
+
+      if (left <= 0) {
+        game.running = false;
+        const bestNow = Math.max(loadBest(), game.score);
+        saveBest(bestNow);
+        document.getElementById("gameBest").textContent = String(bestNow);
+        document.getElementById("gameMsg").textContent = `Готово. Счёт: ${game.score}. Рекорд: ${bestNow}.`;
+        document.getElementById("gameTime").textContent = "0";
+        haptic("success");
+        return;
+      }
+      game.raf = requestAnimationFrame(frame);
+    }
+    game.raf = requestAnimationFrame(frame);
+  }
+
+
   function bindEvents() {
     document.querySelectorAll(".tab").forEach((btn) => {
       btn.addEventListener("click", () => switchTab(btn.getAttribute("data-tab")));
@@ -544,6 +934,16 @@
       haptic("light");
       loadWeather();
     });
+    document.getElementById("letterClose").addEventListener("click", () => {
+      haptic("soft");
+      renderLetters();
+    });
+    document.getElementById("jarBtn").addEventListener("click", () => {
+      enableShake();
+      drawJarNote();
+    });
+    document.getElementById("gameStart").addEventListener("click", () => startGame());
+    document.getElementById("writeBtn").addEventListener("click", () => sendToVlad());
   }
 
   async function start() {
@@ -565,8 +965,12 @@
     initMusicChips();
     renderMusic("happy");
     initMoodPicker();
+    initShareToggle();
     await loadMoods();
     renderMoodUI();
+    renderLetters();
+    initWrite();
+    document.getElementById("gameBest").textContent = String(loadBest());
     loadWeather();
   }
 
