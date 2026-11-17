@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6d9e8" />
+  <meta name="color-scheme" content="light" />
+  <title>Для Томы</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="orb orb-c"></div>
+    <canvas id="sparkles"></canvas>
+  </div>
+
+  <div class="app">
+    <header class="hero">
+      <p class="eyebrow" id="timeGreeting">Добрый день</p>
+      <h1>Привет, <span class="name">Тома</span>!</h1>
+      <p class="hero-date" id="heroDate"></p>
+    </header>
+
+    <section class="card weather-card" id="weatherCard" aria-live="polite">
+      <div class="weather-loading" id="weatherLoading">
+        <div class="skeleton sk-icon"></div>
+        <div class="sk-lines">
+          <div class="skeleton sk-line wide"></div>
+          <div class="skeleton sk-line"></div>
+        </div>
+      </div>
+      <div class="weather-ready hidden" id="weatherReady">
+        <div class="weather-main">
+          <div class="weather-icon" id="weatherIcon" aria-hidden="true"></div>
+          <div>
+            <p class="weather-temp"><span id="weatherTemp">—</span><span class="deg">°</span></p>
+            <p class="weather-desc" id="weatherDesc">Крымск</p>
+          </div>
+        </div>
+        <p class="weather-feels" id="weatherFeels"></p>
+        <p class="weather-tip" id="weatherTip"></p>
+      </div>
+      <div class="weather-error hidden" id="weatherError">
+        <p>Погоду сейчас не удалось загрузить, но Крымск всё равно чудесный.</p>
+        <button type="button" class="btn-text" id="weatherRetry">Попробовать снова</button>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="Разделы">
+      <button type="button" class="tab is-active" role="tab" aria-selected="true" data-tab="compliment">Комплимент</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="ideas">Куда сходить</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="music">Музыка</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="mood">Настроение</button>
+    </nav>
+
+    <section class="panel is-active" id="panel-compliment" role="tabpanel">
+      <article class="card feature-card">
+        <p class="card-kicker">Комплимент дня</p>
+        <p class="compliment-text" id="complimentText"></p>
+        <button type="button" class="btn" id="nextCompliment">Ещё один</button>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-ideas" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Куда сходить</p>
+        <p class="card-lead">Выбери настроение дня — и получи идею.</p>
+        <div class="filters" id="ideaFilters">
+          <button type="button" class="chip" data-filter="home">дома</button>
+          <button type="button" class="chip" data-filter="outdoor">на улице</button>
+          <button type="button" class="chip" data-filter="cheap">дёшево</button>
+          <button type="button" class="chip" data-filter="rain">если дождь</button>
+        </div>
+        <div class="flip-scene">
+          <div class="flip-card" id="ideaFlip">
+            <div class="flip-face flip-front" id="ideaFront"></div>
+            <div class="flip-face flip-back" id="ideaBack"></div>
+          </div>
+        </div>
+        <button type="button" class="btn" id="nextIdea">Другая идея</button>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-music" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Музыка под настроение</p>
+        <p class="card-lead">Выбери, как звучит этот день.</p>
+        <div class="filters" id="moodChips"></div>
+        <p class="music-intro" id="musicIntro"></p>
+        <div class="tracks" id="trackList"></div>
+      </article>
+    </section>
+
+    <section class="panel" id="panel-mood" role="tabpanel" hidden>
+      <article class="card feature-card">
+        <p class="card-kicker">Настроение дня</p>
+        <p class="card-lead">Одной кнопкой — как прошёл день. Через неделю будет красивая картина.</p>
+        <div class="mood-picker" id="moodPicker"></div>
+        <p class="mood-status" id="moodStatus"></p>
+        <div class="chart-wrap">
+          <p class="chart-title">Последние 7 дней</p>
+          <div class="chart" id="moodChart"></div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <p>С теплом, Eseba</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
